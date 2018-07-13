@@ -3,7 +3,7 @@ import sqlite3
 connection = sqlite3.connect("Test")
 print("Connected!")
 
-# connection.execute('''CREATE TABLE COMPANY
+# connection.execute('''CREATE TABLE EUGENE_COMPANY
 #          (ID INT PRIMARY KEY     NOT NULL,
 #          NAME           TEXT    NOT NULL,
 #          AGE            INT     NOT NULL,
