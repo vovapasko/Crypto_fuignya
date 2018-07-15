@@ -21,6 +21,8 @@ class DBHandler:
         except e:
             print('Error: connection not established :\n{}'.format(e))
             DBHandler._instance = None  # <--- не уверен что нужно
+        else:
+            print('Connection established')
 
     def __new__(cls, *args, **kwargs):
         if not cls.__instance:
