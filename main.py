@@ -4,9 +4,9 @@ import requests
 from UrlBuilder import *
 
 # URL = "https://api.coinmarketcap.com/v2/ticker/?limit=20"
-URL1 = getUrlAllCurrency()
-URL2 = getUrlTicker(15, 2, "rank")
-URL3 = getUrlSpecificCurrency(2)
+URL1 = get_url_all_currency()
+URL2 = get_url_ticker(15, 2, "rank")
+URL3 = get_url_specific_currency(2)
 
 # sending get request and saving the response as response object
 r1 = requests.get(url=URL1)
