@@ -3,6 +3,10 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# Eugene's ignore
+.idea/
+*.db
+
 # C extensions
 *.so
 
