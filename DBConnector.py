@@ -12,6 +12,7 @@ class DBHandler:
 
     def __init__(self):
         self.db_name = 'crypto.db'
+        self.table_data = []
         try:
             # variables, that could be changed for another db
             self.main_table_name = "ALL_ITEMS"
@@ -29,7 +30,7 @@ class DBHandler:
 
             # creating main table and inserting
             self.connection.execute("CREATE table if not exists {} ({});".format(self.main_table_name, fields_of_table))
-            self.table_data = self.insert_into_main_table()
+            self.insert_into_main_table()
 
         except Exception as e:
             print('Error: connection not established :\n{}'.format(e))
@@ -42,28 +43,56 @@ class DBHandler:
             cls.__instance = super().__new__(cls, *args, **kwargs)
         return cls.__instance
 
-    def insert_table_of_currency(self, data, currency_name='example', id_of_currency=0):
+    def select_table(self, name='main', where_conditional=None, fields='id'):
+        '''
+
+        :param fields: what field to search
+        :param name: [str] use 'main' or id of currency
+        :param where_conditional: [str] 'id = 4' or 'name = "Petia"'
+        DON'T forget about "" or '' around the <str field> at <str parametr>
+        :return: [object]
+        '''
+        if name == 'main':
+            from_table = self.main_table_name
+            able_fields = 'id, name, symbol. website, time_table_of_currency'.split(', ')
+
+        else:
+            from_table = 'time_table_{}'.format(str(name))
+            able_fields = """rank, last_updated, circulating_supply,
+                    total_supply, max_supply, 
+                    volume_24h, market_cap, percent_change_1h, price,  
+                    percent_change_24h, percent_change_7d, currency_buy""".split(', ')
+        try:
+            if where_conditional is not None:
+                cursor = self.connection.execute('SELECT {} FROM {} where {}'.format(fields, from_table, where_conditional))
+            else:
+                cursor = self.connection.execute('SELECT {} FROM {}'.format(fields, from_table))
+        except Exception as e:
+            raise Exception('Error: {} \n\n try:\n 1) for table "{}" use able fields: {} '
+                            '\n 2) at where conditional to search by str use one more quotes "name = \'Petia\'"'.
+                            format(e, from_table, able_fields))
+        else:
+            return cursor
+
+    def insert_table_of_currency(self, data):
         '''
         Insert into table (pam-pam-paaam)
-        You can use or id or the name, BUT please transfer one of them into function
-        If you enter id and name AND they will be different, program will be oriented on the id
         :param data: data to insert (data['data'] not data['metadata'] or all data )
-        :param currency_name: name of currency with spaces if it have
-        :param id_of_currency: id of currency in list
         :return:
         '''
+        currency_name = ''
+        id_of_currency = 0
 
-        assert id_of_currency != 0 or currency_name != 'example', "Ooooo nooo, I hoped that you will not do it :( " \
-                                                                  "\nPlease, insert values into function"
+        def generator():
+            for element in self.table_data:
+                if element['id'] == data['id'] and element['name'] == data['name']:
+                    yield (element['name'], element['id'])
+            yield False
 
-        assert data['id'] == id_of_currency or data['name'] == currency_name, "Error. Insert not correct data"
-
-        if id_of_currency != 0:
-            currency_name = data['name']
-        elif currency_name != 'example':
-            id_of_currency = data['id']
-        else:
-            raise Exception('this situation is impossible, but like russians says "бережёного бог бережёт" ')
+        for i in generator():
+            assert i, "don't have this currency"
+            currency_name, id_of_currency = i
+            break
 
         # variables, that could be changed for another db
         field_name = 'time_table_of_currency'
@@ -76,12 +105,11 @@ class DBHandler:
             assert row[0] is not None, "Error, you don't have table for this currency "
 
         # also, variables that can be changed
-        new_currency_name = '_'.join(currency_name.split())
         fields = """rank, last_updated, circulating_supply,
                     total_supply, max_supply, 
                     volume_24h, market_cap, percent_change_1h, price,  
                     percent_change_24h, percent_change_7d, currency_buy"""
-        table_name = 'time_table_{}'.format(new_currency_name)
+        table_name = 'time_table_{}'.format(id_of_currency)
 
         # value for insert equal to values_1 + values_2
         values_1 = "{}, {}, {}, {}, {}, ".format(data['rank'], data['last_updated'], int(data['circulating_supply']),
@@ -105,7 +133,6 @@ class DBHandler:
         '''
         Create table (pam-pam-paaam)
         You can use or id or the name, BUT please transfer one of them into function
-        If you enter id and name AND they will be different, program will be oriented on the id
         :param currency_name: name of currency with spaces if it have
         :param id_of_currency: id of currency in list
         :return:
@@ -114,20 +141,25 @@ class DBHandler:
         assert id_of_currency != 0 or currency_name != 'example', "Oooooh nooo, I hoped that you will not do it :( " \
                                                                   "\nPlease, insert values into function"
 
-        if id_of_currency != 0:
-            def generator():
-                for element in self.table_data:
-                    if element['id'] == id_of_currency:
-                        yield element['name']
-                yield False
+        def generator():
+            for element in self.table_data:
+                if (element['name'] == currency_name and currency_name != 'example') or (
+                        element['id'] == id_of_currency and id_of_currency != 0):
+                    # validation, enter name and id and they identify different currencies
+                    if (element['name'] != currency_name and currency_name != 'example') or (
+                            element['id'] != id_of_currency and id_of_currency != 0):
+                        yield False
+                    else:
+                        yield (element['id'], element['name'])
+            yield False
 
-            for i in generator():
-                assert i, "don't have this id"
-                currency_name = i
-                break
+        for i in generator():
+            assert i, "Data error, don't have this id OR don't have this currency's name OR " \
+                      "insert different id and name of currency"
+            id_of_currency, currency_name = i
+            break
 
-        new_currency_name = '_'.join(currency_name.split())
-        table_name = 'time_table_{}'.format(new_currency_name)
+        table_name = 'time_table_{}'.format(id_of_currency)
         field_name = 'time_table_of_currency'
         fields_for_table = """
             last_updated   int PRIMARY KEY  NOT NULL,
@@ -167,6 +199,11 @@ class DBHandler:
 
     def insert_into_main_table(self):
 
+        # return
+        deleted_data = []
+        updated_data = []
+        insert_data = []
+
         # get data
         request_data = get_all_data()
 
@@ -187,6 +224,7 @@ class DBHandler:
             if row[0] not in new_id:
                 # deleted query
                 self.connection.execute("""DELETE FROM {} where id = {};""".format(self.main_table_name, row[0]))
+                deleted_data.append(row)
 
         # go through new data
         for item in request_data['data']:
@@ -204,6 +242,7 @@ class DBHandler:
                     self.connection.execute(
                         """UPDATE {} set name = "{}", symbol = "{}", website = "{}" where id = {};""".format(
                             self.main_table_name, item['name'], item['symbol'], item['website_slug'], item['id']))
+                    updated_data.append(item)
 
                     # ------ only out info
                     old = "{} {} {} {}".format(old_id[index], old_names[index], old_symbol[index], old_website[index])
@@ -215,9 +254,11 @@ class DBHandler:
                 self.connection.execute("""INSERT into {} (id, name, symbol, website)
                 values ({}, "{}", "{}", "{}");""".format(self.main_table_name, item['id'], item['name'], item['symbol'],
                                                          item['website_slug']))
+                insert_data.append(item)
 
         self.connection.commit()
-        return request_data['data']
+        self.table_data = request_data['data']
+        return deleted_data, updated_data, insert_data
 
 
 if __name__ == "__main__":
@@ -227,5 +268,5 @@ if __name__ == "__main__":
     URL3 = get_url_specific_currency(1)
     r3 = requests.get(url=URL3)
     data3 = r3.json()
-    connector.insert_table_of_currency('Digitalcoin', data3['data'])
+    connector.insert_table_of_currency(data3['data'])
     print(time.time() - start)
