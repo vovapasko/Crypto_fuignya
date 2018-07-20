@@ -2,12 +2,13 @@ import socket  # Import socket module
 from UrlBuilder import *
 import threading
 import time
+import json
 
 
-def client_manage(c, i):
-    data = get_all_data()
+def client_manage(c, thread_name):
+    main_data = get_all_data()
     send_data = ["id: {}, name: {}, symbol: {}".format(item['id'], item['name'], item['symbol']) for item in
-                 data['data']]
+                 main_data['data']]
     str_data = '\n'.join(send_data)
     send_str = "Thank you for connecting\nData: " + str_data
     c.send(send_str.encode())
@@ -15,29 +16,38 @@ def client_manage(c, i):
         from_client = c.recv(1024).decode()
         time.sleep(2)
         if not from_client:
-            print('End work thread', i)
+            print('End work thread', thread_name)
             c.close()
             break
         else:
-            print('-----------\nThread #', i, 'got:', from_client, '\n-------------')
+            print('-----------\nThread #', thread_name, 'got:', from_client, '\n-------------')
+            data = json.loads(from_client)
+            for i in data['id']:
+                if data['open']:
+                    URL = get_url_specific_currency(i)
+                    r = requests.get(url=URL)
+                    send_data = json.dumps(r.json())
+                    c.send(send_data.encode())
+                    print('thread', thread_name, 'send data')
 
 
-s = socket.socket()  # Create a socket object
-host = socket.gethostname()  # Get local machine name
-print(host)
-port = 12345  # Reserve a port for your service.
-s.bind((host, port))  # Bind to the port
+if __name__ == '__main__':
 
-s.listen(5)
-i = 0
-while True:
-    print('server wait for client connection.')
-    client, addr = s.accept()  # Establish connection with client.
-    i += 1
+    s = socket.socket()  # Create a socket object
+    host = socket.gethostname()  # Get local machine name
+    port = 12345  # Reserve a port for your service.
+    s.bind((host, port))  # Bind to the port
 
-    t = threading.Thread(target=client_manage, args=(client, i), name=i)
-    t.daemon = True
-    t.start()
+    s.listen(5)
+    i = 0
+    while True:
+        print('server wait for client connection.')
+        client, addr = s.accept()  # Establish connection with client.
+        i += 1
 
-    print('\nGot connection from', addr)
-    print('Work thread', t.name, '\n')
+        t = threading.Thread(target=client_manage, args=(client, i), name=i)
+        t.daemon = True
+        t.start()
+
+        print('\nGot connection from', addr)
+        print('Work thread', t.name, '\n')
