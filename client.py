@@ -8,7 +8,7 @@ port = 12345  # Reserve a port for your service.
 
 s.connect((host, port))
 print(s.recv(646010).decode())
-send_data = json.dumps({'id': 1})
+send_data = json.dumps({'look': True, 'id': [1, 2, 3], 'open': True})
 s.send(send_data.encode())
 
 print('----\ndone')
